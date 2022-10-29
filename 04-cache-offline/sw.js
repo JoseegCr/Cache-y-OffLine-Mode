@@ -28,6 +28,7 @@ self.addEventListener('install', e => {
             '/index.html',
             '/css/style.css',
             '/img/main.jpg',
+            '/img/no-img.jpg',
              '/js/app.js'
         ]);
     });
@@ -43,15 +44,31 @@ self.addEventListener('install', e => {
 self.addEventListener('fetch', e => {
     e.respondWith(caches.match(e.request));
 
-    if (e.request.url.includes('bootstrap')) {
-        return e.respondWith(caches.match(e.request));
-    }
+    const respuesta = new Promise((resolve, reject) => {
 
-    const respuesta = caches.open(CACHE_STATIC_NAME).then(cache => {
-        fetch(e.request).then(newRes =>
-            cache.put(e.request, newRes));
-            return caches.match(e.request);
-   });
+        let rechazada = false;
+        const falloUnaVez = () => {
+            if (rechazada) {
+                if (/\.(png|jpg)$/i.test(e.request.url)) {
+                    resolve(caches.match('/img/no-image.jpg'));
+                } else {
+                    reject('No se encontro respuesta');
+                }
+            } else {
+                rechazada = true;
+            }
+        };
+
+        fetch(e.request).then(res => {
+            res.ok ? resolve(res) : falloUnaVez();
+        }).catch(falloUnaVez);
+
+        caches.match(e.request).then(res => {
+            res ? resolve(res) : falloUnaVez();
+        }).catch(falloUnaVez);
+
+    });
+           
 
    e.respondWith(respuesta);
  
